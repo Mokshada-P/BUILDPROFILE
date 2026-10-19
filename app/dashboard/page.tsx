@@ -20,7 +20,8 @@ import {
   Award,
   Clock,
   Layers,
-  ChevronRight
+  ChevronRight,
+  Linkedin
 } from "lucide-react";
 
 export default async function DashboardOverviewPage() {
@@ -62,6 +63,18 @@ export default async function DashboardOverviewPage() {
         </div>
 
         <div className="flex items-center gap-3">
+          {profile?.linkedin_access_token ? (
+            <Badge variant="outline" className="border-blue-500/30 text-blue-400 bg-blue-950/20 text-xs py-1.5 px-3 flex items-center gap-1.5">
+              <Linkedin className="w-3.5 h-3.5 fill-current" />
+              <span>LinkedIn Connected</span>
+            </Badge>
+          ) : (
+            <a href="/api/auth/linkedin">
+              <Button variant="outline" className="border-[#0A66C2]/40 bg-[#0A66C2]/10 hover:bg-[#0A66C2]/20 text-[#70b5f9] text-xs h-9">
+                <Linkedin className="w-3.5 h-3.5 mr-1.5 fill-current" /> Connect LinkedIn
+              </Button>
+            </a>
+          )}
           <Link href="/dashboard/audit">
             <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-medium shadow-md shadow-indigo-500/20 text-xs h-9">
               <Sparkles className="w-3.5 h-3.5 mr-1.5" /> Run Profile Audit

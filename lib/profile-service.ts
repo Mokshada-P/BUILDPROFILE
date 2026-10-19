@@ -45,6 +45,10 @@ export interface ProfileRecord {
     postingFrequency?: string;
     contentPillars?: string[];
   };
+  linkedin_access_token?: string;
+  linkedin_member_urn?: string;
+  linkedin_token_expires_at?: string;
+  linkedin_profile_data?: any;
   onboarding_completed?: boolean;
   created_at?: string;
   updated_at?: string;

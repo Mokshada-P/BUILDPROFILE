@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { cookies } from "next/headers";
+import type { NextRequest } from "next/server";
 
 export interface CurrentUser {
   id: string;
@@ -8,13 +9,44 @@ export interface CurrentUser {
   isDemo?: boolean;
 }
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+export async function getCurrentUser(req?: Request | NextRequest): Promise<CurrentUser | null> {
   // 1. Check demo/sandbox session cookie
-  const cookieStore = cookies();
-  const demoCookie = cookieStore.get("buildprofile_demo_user");
-  if (demoCookie?.value) {
+  let rawCookieValue: string | undefined;
+
+  // If passed from a Route Handler
+  if (req && "cookies" in req && typeof (req as NextRequest).cookies?.get === "function") {
+    rawCookieValue = (req as NextRequest).cookies.get("buildprofile_demo_user")?.value;
+  }
+
+  if (!rawCookieValue && req) {
+    const cookieHeader = req.headers.get("cookie");
+    if (cookieHeader) {
+      const match = cookieHeader.match(/(?:^|;\s*)buildprofile_demo_user=([^;]+)/);
+      if (match) {
+        rawCookieValue = match[1];
+      }
+    }
+  }
+
+  // Fallback to next/headers cookies() in Server Components / Actions
+  if (!rawCookieValue) {
     try {
-      const parsed = JSON.parse(demoCookie.value);
+      const cookieStore = cookies();
+      rawCookieValue = cookieStore.get("buildprofile_demo_user")?.value;
+    } catch {
+      // ignore
+    }
+  }
+
+  if (rawCookieValue) {
+    try {
+      let rawVal = rawCookieValue;
+      try {
+        rawVal = decodeURIComponent(rawVal);
+      } catch {
+        // ignore
+      }
+      const parsed = JSON.parse(rawVal);
       return {
         id: parsed.id || "demo-user-uuid-12345",
         email: parsed.email || "alex.chen@example.com",

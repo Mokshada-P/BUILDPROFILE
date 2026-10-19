@@ -27,9 +27,18 @@ import {
   MoreHorizontal,
   Globe,
   Sliders,
-  FileCheck2
+  FileCheck2,
+  Linkedin,
+  AlertCircle
 } from "lucide-react";
-import { generatePostAction, saveDraftAction, loadDraftsAction } from "./actions";
+import {
+  generatePostAction,
+  saveDraftAction,
+  loadDraftsAction,
+  getLinkedInStatusAction,
+  disconnectLinkedInAction,
+  publishToLinkedInAction,
+} from "./actions";
 import { loadCurrentProfile } from "@/app/onboarding/actions";
 import { useToast } from "@/components/ui/use-toast";
 import type { LinkedInPost, PostDraftRecord } from "@/lib/studio-service";
@@ -56,6 +65,14 @@ export default function StudioPage() {
   const [draftsList, setDraftsList] = useState<PostDraftRecord[]>([]);
   const [calendarOpen, setCalendarOpen] = useState(false);
 
+  // LinkedIn Connection State
+  const [linkedInStatus, setLinkedInStatus] = useState<{
+    isConnected: boolean;
+    memberUrn?: string | null;
+    profileData?: any;
+  }>({ isConnected: false });
+  const [publishing, setPublishing] = useState(false);
+
   // User Profile
   const [profile, setProfile] = useState<any>(null);
 
@@ -75,16 +92,38 @@ export default function StudioPage() {
     imageUrl: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=1200&q=80",
   });
 
-  // Load profile and drafts on mount
+  // Load profile, drafts, and LinkedIn status on mount
   useEffect(() => {
     async function load() {
       const p = await loadCurrentProfile();
       if (p) setProfile(p);
       const drafts = await loadDraftsAction();
       setDraftsList(drafts);
+      const liStatus = await getLinkedInStatusAction();
+      setLinkedInStatus(liStatus);
     }
     load();
-  }, []);
+
+    // Check query params returned from OAuth callback
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("linkedin_connected") === "true") {
+        const memberName = params.get("member_name") || "LinkedIn Account";
+        toast({
+          title: "LinkedIn Connected",
+          description: `Successfully authenticated as ${memberName}. You can now publish posts directly to your feed!`,
+        });
+        window.history.replaceState({}, "", window.location.pathname);
+      } else if (params.get("error")) {
+        toast({
+          title: "LinkedIn Connection Notice",
+          description: params.get("error") || "Authentication could not be completed.",
+          variant: "destructive",
+        });
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [toast]);
 
   async function handleSendMessage(promptToSend?: string) {
     const text = promptToSend || userInput;
@@ -115,7 +154,6 @@ export default function StudioPage() {
   }
 
   function handleSwitchHook(hook: string) {
-    // Replace the first sentence or hook in the body
     const lines = activeDraft.body.split("\n");
     lines[0] = hook;
     const newBody = lines.join("\n");
@@ -171,6 +209,58 @@ export default function StudioPage() {
     setTimeout(() => setCopied(false), 2500);
   }
 
+  async function handleDisconnectLinkedIn() {
+    await disconnectLinkedInAction();
+    setLinkedInStatus({ isConnected: false });
+    toast({
+      title: "LinkedIn Disconnected",
+      description: "Your LinkedIn account has been disconnected.",
+    });
+  }
+
+  async function handlePublishToLinkedIn() {
+    if (!linkedInStatus.isConnected) {
+      toast({
+        title: "LinkedIn Not Connected",
+        description: "Please connect your LinkedIn account first using the 'Connect LinkedIn' button.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPublishing(true);
+    try {
+      const fullPost = `${activeDraft.body}\n\n${activeDraft.cta}\n\n${activeDraft.hashtags.join(" ")}`;
+
+      const res = await fetch("/api/linkedin/post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ commentary: fullPost }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to publish post to LinkedIn.");
+      }
+
+      toast({
+        title: "Published to LinkedIn!",
+        description: data.postId
+          ? `Post is now live on your LinkedIn feed (ID: ${data.postId}).`
+          : "Your post has been successfully shared to your LinkedIn feed!",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Publishing Failed",
+        description: err.message || "Failed to post to LinkedIn. Check connection status.",
+        variant: "destructive",
+      });
+    } finally {
+      setPublishing(false);
+    }
+  }
+
   return (
     <div className="space-y-6 pb-12">
       {/* Studio Header */}
@@ -190,7 +280,35 @@ export default function StudioPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* LinkedIn Connection Status Pill / Connect Button */}
+          {linkedInStatus.isConnected ? (
+            <div className="flex items-center gap-2 p-1 pl-2.5 pr-2 rounded-lg bg-blue-950/40 border border-blue-500/30 text-xs">
+              <Linkedin className="w-3.5 h-3.5 text-[#0A66C2] fill-[#0A66C2]" />
+              <span className="text-slate-200 font-medium truncate max-w-[130px]">
+                {linkedInStatus.profileData?.name || "Connected"}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleDisconnectLinkedIn}
+                className="h-6 px-1.5 text-[10px] text-slate-400 hover:text-red-400 hover:bg-red-500/10"
+              >
+                Disconnect
+              </Button>
+            </div>
+          ) : (
+            <a href="/api/auth/linkedin">
+              <Button
+                type="button"
+                className="bg-[#0A66C2] hover:bg-[#004182] text-white text-xs h-9 px-3 shadow-sm font-semibold"
+              >
+                <Linkedin className="w-3.5 h-3.5 mr-1.5 fill-current" />
+                Connect LinkedIn
+              </Button>
+            </a>
+          )}
+
           <Button
             variant="outline"
             onClick={() => setCalendarOpen(true)}
@@ -344,15 +462,34 @@ export default function StudioPage() {
                 <Globe className="w-4 h-4 text-blue-400" />
                 <span className="text-xs font-semibold text-white">Live LinkedIn Feed Preview</span>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleCopyPost}
-                className="border-slate-700 bg-slate-800 hover:bg-slate-700 text-white text-xs h-7 px-2.5"
-              >
-                {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
-                {copied ? "Copied" : "Copy Post"}
-              </Button>
+              <div className="flex items-center gap-2">
+                {/* Publish to LinkedIn Button */}
+                <Button
+                  size="sm"
+                  onClick={handlePublishToLinkedIn}
+                  disabled={publishing}
+                  className="bg-[#0A66C2] hover:bg-[#004182] text-white text-xs h-7 px-2.5 font-medium shadow-sm"
+                >
+                  {publishing ? (
+                    <>
+                      <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> Publishing...
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-3 h-3 mr-1" /> Publish to LinkedIn
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopyPost}
+                  className="border-slate-700 bg-slate-800 hover:bg-slate-700 text-white text-xs h-7 px-2.5"
+                >
+                  {copied ? <Check className="w-3 h-3 mr-1" /> : <Copy className="w-3 h-3 mr-1" />}
+                  {copied ? "Copied" : "Copy Post"}
+                </Button>
+              </div>
             </CardHeader>
 
             <CardContent className="p-5 space-y-4">
