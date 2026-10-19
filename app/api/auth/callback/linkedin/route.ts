@@ -50,21 +50,24 @@ export async function GET(request: NextRequest) {
     // Calculate token expiry timestamp
     const expiresAt = new Date(Date.now() + (tokenData.expires_in || 5184000) * 1000).toISOString();
 
+    const memberName = userInfo.name || `${userInfo.given_name || ''} ${userInfo.family_name || ''}`.trim() || "LinkedIn User";
+
     // 3. Store the access token and author URN linked to the authenticated user
     await updateProfile(user.id, {
       linkedin_access_token: accessToken,
       linkedin_member_urn: authorUrn,
       linkedin_token_expires_at: expiresAt,
+      avatar_url: userInfo.picture || undefined,
       linkedin_profile_data: {
         sub: userInfo.sub,
-        name: userInfo.name || `${userInfo.given_name || ''} ${userInfo.family_name || ''}`.trim(),
+        name: memberName,
         email: userInfo.email,
         picture: userInfo.picture,
       },
     });
 
     targetRedirect.searchParams.set("linkedin_connected", "true");
-    targetRedirect.searchParams.set("member_name", userInfo.name || "LinkedIn User");
+    targetRedirect.searchParams.set("member_name", memberName);
 
     const response = NextResponse.redirect(targetRedirect);
     // Clear state cookie

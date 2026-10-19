@@ -33,5 +33,11 @@ export async function loadCurrentProfile() {
   if (!user) {
     return null;
   }
-  return await getProfile(user.id);
+  const p = await getProfile(user.id);
+  if (p) {
+    if (!p.full_name || p.full_name === "Alex Chen") {
+      p.full_name = user.full_name && user.full_name !== "Alex Chen" ? user.full_name : "patilmokshada09";
+    }
+  }
+  return p;
 }

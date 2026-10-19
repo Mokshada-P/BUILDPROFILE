@@ -60,14 +60,14 @@ const sandboxProfileStore = new Map<string, Partial<ProfileRecord>>();
 // Initialize with a rich default profile for demo user
 sandboxProfileStore.set("demo-user-uuid-12345", {
   user_id: "demo-user-uuid-12345",
-  full_name: "Alex Chen",
-  headline: "Senior Distributed Systems Engineer | ex-Stripe | Rust & Go Enthusiast",
+  full_name: "patilmokshada09",
+  headline: "Software Engineer & Builder | AI Systems & Full-Stack",
   location: "San Francisco, CA",
-  linkedin_url: "https://linkedin.com/in/alexchen-cloud",
+  linkedin_url: "https://linkedin.com/in/patilmokshada09",
   current_status: "Professional",
-  current_industry: "Fintech & Cloud Infrastructure",
+  current_industry: "Technology & Software",
   target_industry: "AI Infrastructure & Next-Gen Cloud",
-  target_roles: ["Staff Software Engineer", "Principal Systems Architect", "Engineering Director"],
+  target_roles: ["Staff Software Engineer", "Principal Systems Architect", "Full Stack Engineer"],
   skills: ["Go", "Rust", "Distributed Systems", "Kubernetes", "Kafka", "PostgreSQL", "System Architecture", "High Concurrency"],
   career_goals: [
     "Transition into Staff / Principal Systems Architect",
@@ -120,7 +120,11 @@ sandboxProfileStore.set("demo-user-uuid-12345", {
 export async function getProfile(userId: string): Promise<ProfileRecord | null> {
   // Check sandbox cache first if userId matches demo
   if (sandboxProfileStore.has(userId)) {
-    return sandboxProfileStore.get(userId) as ProfileRecord;
+    const profile = sandboxProfileStore.get(userId) as ProfileRecord;
+    if (!profile.full_name || profile.full_name === "Alex Chen") {
+      profile.full_name = "patilmokshada09";
+    }
+    return profile;
   }
 
   try {
@@ -132,19 +136,30 @@ export async function getProfile(userId: string): Promise<ProfileRecord | null> 
       .single();
 
     if (!error && data) {
-      return data as ProfileRecord;
+      const rec = data as ProfileRecord;
+      if (!rec.full_name || rec.full_name === "Alex Chen") {
+        rec.full_name = "patilmokshada09";
+      }
+      return rec;
     }
   } catch {
     // If Supabase is unconfigured
   }
 
   // Fallback return if present or empty starter
-  return (
-    (sandboxProfileStore.get(userId) as ProfileRecord) || {
-      user_id: userId,
-      onboarding_completed: false,
+  const existing = sandboxProfileStore.get(userId) as ProfileRecord | undefined;
+  if (existing) {
+    if (!existing.full_name || existing.full_name === "Alex Chen") {
+      existing.full_name = "patilmokshada09";
     }
-  );
+    return existing;
+  }
+
+  return {
+    user_id: userId,
+    full_name: "patilmokshada09",
+    onboarding_completed: false,
+  };
 }
 
 export async function updateProfile(

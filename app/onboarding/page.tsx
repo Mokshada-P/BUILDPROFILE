@@ -370,7 +370,7 @@ export default function OnboardingPage() {
                     id="fullName"
                     value={formData.fullName}
                     onChange={e => handleFieldChange("fullName", e.target.value)}
-                    placeholder="e.g. Alex Chen"
+                    placeholder="e.g. Mokshada Patil"
                     className="bg-slate-950/60 border-slate-800 text-white"
                   />
                 </div>

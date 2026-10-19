@@ -36,16 +36,26 @@ export async function loadDraftsAction(): Promise<PostDraftRecord[]> {
 export async function getLinkedInStatusAction() {
   const user = await getCurrentUser();
   if (!user) {
-    return { isConnected: false };
+    return {
+      isConnected: false,
+      memberUrn: null,
+      profileData: null,
+      userName: "patilmokshada09",
+    };
   }
 
   const profile = await getProfile(user.id);
   const isConnected = Boolean(profile?.linkedin_access_token && profile?.linkedin_member_urn);
 
+  const rawName = user.full_name || profile?.full_name;
+  const userName = (!rawName || rawName === "Alex Chen") ? "patilmokshada09" : rawName;
+
   return {
     isConnected,
     memberUrn: profile?.linkedin_member_urn || null,
     profileData: profile?.linkedin_profile_data || null,
+    userName,
+    userEmail: user.email,
   };
 }
 

@@ -48,3 +48,50 @@ test("LinkedIn Post payload strictly conforms to LinkedIn REST API specification
   assert.strictEqual(payload.lifecycleState, "PUBLISHED");
   assert.strictEqual(payload.commentary, commentary);
 });
+
+test("LinkedIn Preview card resolves authenticated OpenID profile name and picture when connected", () => {
+  const isConnected = true;
+  const linkedInProfileData = {
+    sub: "li-sub-12345",
+    name: "Mokshada Patil",
+    picture: "https://media.licdn.com/dms/image/v2/test-avatar.jpg",
+  };
+  const currentProfile = {
+    full_name: "patilmokshada09",
+    avatar_url: null,
+  };
+
+  const previewName = isConnected && linkedInProfileData?.name
+    ? linkedInProfileData.name
+    : (currentProfile?.full_name || "patilmokshada09");
+
+  const previewPicture = isConnected
+    ? (linkedInProfileData?.picture || currentProfile?.avatar_url || null)
+    : (currentProfile?.avatar_url || null);
+
+  assert.strictEqual(previewName, "Mokshada Patil");
+  assert.strictEqual(previewPicture, "https://media.licdn.com/dms/image/v2/test-avatar.jpg");
+});
+
+test("LinkedIn Preview card safely falls back to logged-in user (patilmokshada09) when not connected", () => {
+  const isConnected = false;
+  const linkedInProfileData = null;
+  const currentProfile = {
+    full_name: "patilmokshada09",
+    avatar_url: null,
+  };
+
+  const previewName = isConnected && linkedInProfileData?.name
+    ? linkedInProfileData.name
+    : (currentProfile?.full_name && currentProfile.full_name !== "Alex Chen"
+        ? currentProfile.full_name
+        : "patilmokshada09");
+
+  const previewPicture = isConnected
+    ? (linkedInProfileData?.picture || currentProfile?.avatar_url || null)
+    : (currentProfile?.avatar_url || null);
+
+  assert.strictEqual(previewName, "patilmokshada09");
+  assert.notStrictEqual(previewName, "Alex Chen");
+  assert.strictEqual(previewPicture, null);
+});

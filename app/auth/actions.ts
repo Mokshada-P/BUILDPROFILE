@@ -144,8 +144,8 @@ export async function startDemoSession(role: string = "Professional") {
   
   cookieStore.set("buildprofile_demo_user", JSON.stringify({
     id: demoUserId,
-    email: "alex.chen@example.com",
-    full_name: "Alex Chen",
+    email: "patilmokshada09@gmail.com",
+    full_name: "patilmokshada09",
     role: role,
     created_at: new Date().toISOString()
   }), {

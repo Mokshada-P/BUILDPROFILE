@@ -47,10 +47,11 @@ export async function getCurrentUser(req?: Request | NextRequest): Promise<Curre
         // ignore
       }
       const parsed = JSON.parse(rawVal);
+      const name = parsed.full_name || parsed.name || (parsed.email ? parsed.email.split("@")[0] : null);
       return {
         id: parsed.id || "demo-user-uuid-12345",
-        email: parsed.email || "alex.chen@example.com",
-        full_name: parsed.full_name || "Alex Chen",
+        email: parsed.email || "patilmokshada09@gmail.com",
+        full_name: (!name || name === "Alex Chen") ? "patilmokshada09" : name,
         isDemo: true,
       };
     } catch {
@@ -63,10 +64,11 @@ export async function getCurrentUser(req?: Request | NextRequest): Promise<Curre
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      const name = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0];
       return {
         id: user.id,
         email: user.email || "",
-        full_name: user.user_metadata?.full_name || user.email?.split("@")[0] || "User",
+        full_name: (!name || name === "Alex Chen") ? "patilmokshada09" : name,
         isDemo: false,
       };
     }

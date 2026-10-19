@@ -70,9 +70,9 @@ export async function generatePersonalizedOutreach(
   }
 ): Promise<OutreachMessage> {
   const profile = await getProfile(userId);
-  const myName = profile?.full_name || "Alex Chen";
-  const myHeadline = profile?.headline || "Senior Backend Engineer";
-  const mySkills = profile?.skills?.slice(0, 3).join(", ") || "Go, Distributed Systems";
+  const myName = (profile?.full_name && profile.full_name !== "Alex Chen") ? profile.full_name : "patilmokshada09";
+  const myHeadline = profile?.headline || "Software Engineer & Builder";
+  const mySkills = profile?.skills?.slice(0, 3).join(", ") || "Full-Stack, Cloud Systems";
 
   const prompt = `You are an Executive Networking Strategist for Senior Tech Professionals.
 Generate a hyper-personalized LinkedIn cold connection request and InMail script.

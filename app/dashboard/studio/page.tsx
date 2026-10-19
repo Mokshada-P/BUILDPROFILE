@@ -70,6 +70,7 @@ export default function StudioPage() {
     isConnected: boolean;
     memberUrn?: string | null;
     profileData?: any;
+    userName?: string;
   }>({ isConnected: false });
   const [publishing, setPublishing] = useState(false);
 
@@ -114,6 +115,7 @@ export default function StudioPage() {
           description: `Successfully authenticated as ${memberName}. You can now publish posts directly to your feed!`,
         });
         window.history.replaceState({}, "", window.location.pathname);
+        load();
       } else if (params.get("error")) {
         toast({
           title: "LinkedIn Connection Notice",
@@ -260,6 +262,48 @@ export default function StudioPage() {
       setPublishing(false);
     }
   }
+
+  // Computed identity for Live LinkedIn Feed Preview
+  const isLinkedInConnected = Boolean(
+    linkedInStatus.isConnected &&
+    (linkedInStatus.memberUrn || profile?.linkedin_member_urn)
+  );
+
+  const linkedInUserData = linkedInStatus.profileData || profile?.linkedin_profile_data;
+
+  // Name: If LinkedIn connected -> OpenID full name; otherwise logged-in profile name (fallback to patilmokshada09)
+  const previewAuthorName = isLinkedInConnected && linkedInUserData?.name
+    ? linkedInUserData.name
+    : (profile?.full_name && profile.full_name !== "Alex Chen"
+        ? profile.full_name
+        : (linkedInStatus.userName && linkedInStatus.userName !== "Alex Chen"
+            ? linkedInStatus.userName
+            : "patilmokshada09"));
+
+  // Picture: OpenID profile picture if LinkedIn connected; fallback to profile avatar_url
+  const previewAuthorPicture = isLinkedInConnected
+    ? (linkedInUserData?.picture || profile?.avatar_url || null)
+    : (profile?.avatar_url || null);
+
+  // Initials: For fallback avatar circle
+  const previewAuthorInitials = previewAuthorName
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part: string) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || previewAuthorName.slice(0, 2).toUpperCase() || "PM";
+
+  // Job Title / Headline: Real headline or target role rather than dummy text
+  const previewAuthorHeadline = isLinkedInConnected
+    ? (linkedInUserData?.headline ||
+       (profile?.headline && !profile.headline.includes("ex-Stripe") && !profile.headline.includes("Go & Distributed")
+         ? profile.headline
+         : (profile?.target_roles?.[0] ? `${profile.target_roles[0]} | LinkedIn Member` : "Software Engineer | LinkedIn Member")))
+    : (profile?.headline && !profile.headline.includes("ex-Stripe") && !profile.headline.includes("Go & Distributed")
+        ? profile.headline
+        : (profile?.target_roles?.[0] ? `${profile.target_roles[0]} | Tech Professional` : "Software Engineer & Builder"));
 
   return (
     <div className="space-y-6 pb-12">
@@ -521,16 +565,30 @@ export default function StudioPage() {
                 {/* Author Info Header */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white text-sm">
-                      {profile?.full_name?.slice(0, 2).toUpperCase() || "AC"}
-                    </div>
+                    {previewAuthorPicture ? (
+                      <img
+                        src={previewAuthorPicture}
+                        alt={previewAuthorName}
+                        className="w-11 h-11 rounded-full object-cover border border-slate-700 shadow-sm shrink-0"
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-bold text-white text-sm shrink-0 shadow-sm">
+                        {previewAuthorInitials}
+                      </div>
+                    )}
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs font-bold text-white">{profile?.full_name || "Alex Chen"}</span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-white">{previewAuthorName}</span>
                         <span className="text-[10px] text-slate-500">• 1st</span>
+                        {isLinkedInConnected && (
+                          <Badge variant="outline" className="text-[9px] h-4 px-1.5 py-0 border-[#0A66C2]/40 text-[#70b5f9] bg-[#0A66C2]/15 font-normal flex items-center gap-1">
+                            <Linkedin className="w-2.5 h-2.5 fill-current" /> Connected
+                          </Badge>
+                        )}
                       </div>
                       <div className="text-[10px] text-slate-400 line-clamp-1">
-                        {profile?.headline || "Senior Software Engineer | Go & Distributed Systems"}
+                        {previewAuthorHeadline}
                       </div>
                       <div className="text-[9px] text-slate-500 flex items-center gap-1 mt-0.5">
                         <span>Just now</span>
