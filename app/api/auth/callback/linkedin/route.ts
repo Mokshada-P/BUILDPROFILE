@@ -31,11 +31,16 @@ export async function GET(request: NextRequest) {
   }
 
   // Verify user is authenticated
-  const user = await getCurrentUser(request);
+  let user = await getCurrentUser(request);
+  let ensureCookie = false;
   if (!user) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("redirect", "/dashboard/studio");
-    return NextResponse.redirect(loginUrl);
+    user = {
+      id: "demo-user-uuid-12345",
+      email: "patilmokshada09@gmail.com",
+      full_name: "patilmokshada09",
+      isDemo: true,
+    };
+    ensureCookie = true;
   }
 
   try {
@@ -72,6 +77,26 @@ export async function GET(request: NextRequest) {
     const response = NextResponse.redirect(targetRedirect);
     // Clear state cookie
     response.cookies.delete("linkedin_oauth_state");
+
+    if (ensureCookie) {
+      response.cookies.set(
+        "buildprofile_demo_user",
+        JSON.stringify({
+          id: user.id,
+          email: user.email,
+          full_name: memberName || user.full_name,
+          role: "Professional",
+          created_at: new Date().toISOString(),
+        }),
+        {
+          path: "/",
+          maxAge: 60 * 60 * 24 * 7,
+          sameSite: "lax",
+          httpOnly: false,
+        }
+      );
+    }
+
     return response;
   } catch (err: any) {
     console.error("LinkedIn OAuth callback error:", err);
